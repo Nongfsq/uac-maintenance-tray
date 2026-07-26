@@ -51,6 +51,30 @@ foreach ($file in $markdownFiles) {
     }
 }
 
+$englishLanguagePack = Join-Path $repoRoot 'languages\en-US.json'
+$chineseLanguagePack = Join-Path $repoRoot 'languages\zh-CN.json'
+if (-not (Test-Path -LiteralPath $englishLanguagePack) -or -not (Test-Path -LiteralPath $chineseLanguagePack)) {
+    $failures.Add('Both en-US and zh-CN language packs are required.')
+}
+else {
+    $englishKeys = @((Get-Content -Raw -LiteralPath $englishLanguagePack | ConvertFrom-Json -AsHashtable).Keys | Sort-Object)
+    $chineseKeys = @((Get-Content -Raw -LiteralPath $chineseLanguagePack | ConvertFrom-Json -AsHashtable).Keys | Sort-Object)
+    if (Compare-Object -ReferenceObject $englishKeys -DifferenceObject $chineseKeys) {
+        $failures.Add('The en-US and zh-CN language packs do not contain the same keys.')
+    }
+    else {
+        $englishPack = Get-Content -Raw -LiteralPath $englishLanguagePack | ConvertFrom-Json -AsHashtable
+        $chinesePack = Get-Content -Raw -LiteralPath $chineseLanguagePack | ConvertFrom-Json -AsHashtable
+        foreach ($key in $englishKeys) {
+            $englishPlaceholders = @([regex]::Matches($englishPack[$key], '\{\d+\}').Value | Sort-Object -Unique)
+            $chinesePlaceholders = @([regex]::Matches($chinesePack[$key], '\{\d+\}').Value | Sort-Object -Unique)
+            if (Compare-Object -ReferenceObject $englishPlaceholders -DifferenceObject $chinesePlaceholders) {
+                $failures.Add("Language-pack placeholders do not match for key '$key'.")
+            }
+        }
+    }
+}
+
 if (-not $SkipBuild) {
     dotnet build $project -c Release
     if ($LASTEXITCODE -ne 0) { $failures.Add('dotnet build failed.') }
@@ -74,8 +98,12 @@ if ($ReleaseZip) {
                 'UacMaintenanceTray.exe',
                 'docs/README.md',
                 'docs/README.zh-CN.md',
+                'docs/LOCALIZATION.md',
+                'docs/RELEASE-NOTES.md',
                 'licenses/PROJECT-LICENSE.txt',
                 'assets/uac-maintenance-tray.svg',
+                'languages/en-US.json',
+                'languages/zh-CN.json',
                 'checksums/FILE-MANIFEST.sha256'
             )
             foreach ($requiredFile in $required) {

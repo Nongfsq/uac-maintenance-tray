@@ -14,5 +14,6 @@ Verify all of the following:
 8. Both clearly named ZIPs contain one versioned top-level folder whose root has only `UacMaintenanceTray.exe`; `assets/`, `checksums/`, `docs/`, and `licenses/` contain the approved SVG, manifest, both READMEs, and MIT license. The self-contained ZIP additionally contains exact .NET notices; the framework-dependent ZIP does not claim to bundle .NET. Both hashes match the shared `SHA256SUMS` file.
 9. English and Chinese documentation agree about risks, installation, diagnostics, recovery, unsigned SmartScreen behavior, and the no-service/no-telemetry design.
 10. The approved SVG produces the EXE and tray icon at Windows notification-area sizes.
+11. All tray-visible strings use the localization layer; English and Simplified Chinese packs have identical key sets, invalid packs fall back safely, and both packs appear in each release ZIP.
 
 Do not change UAC policy, create or delete scheduled tasks, launch the elevated commands, publish to GitHub, or modify files. Report findings first, ordered by severity, with exact file and line references. Separate confirmed facts from inference. If no blocking issue exists, state that explicitly and list remaining release risks and untested assumptions.

@@ -4,26 +4,48 @@ namespace UacMaintenanceTray;
 
 internal sealed class TrayApplicationContext : ApplicationContext
 {
+    private readonly LocalizationManager _localization;
     private readonly NotifyIcon _notifyIcon;
     private readonly ToolStripMenuItem _statusItem;
     private readonly ToolStripMenuItem _enableItem;
     private readonly ToolStripMenuItem _restoreItem;
+    private readonly ToolStripMenuItem _languageItem;
+    private readonly ToolStripMenuItem _systemLanguageItem;
+    private readonly ToolStripMenuItem _englishLanguageItem;
+    private readonly ToolStripMenuItem _chineseLanguageItem;
+    private readonly ToolStripMenuItem _logItem;
+    private readonly ToolStripMenuItem _exitItem;
     private readonly System.Windows.Forms.Timer _refreshTimer;
     private readonly Icon _appIcon;
     private bool _operationInProgress;
 
     internal TrayApplicationContext()
     {
-        _statusItem = new ToolStripMenuItem("状态：正在读取…") { Enabled = false };
-        _enableItem = new ToolStripMenuItem("启用管理员维护模式（6 小时）");
-        _restoreItem = new ToolStripMenuItem("立即恢复原 UAC 策略");
-        var logItem = new ToolStripMenuItem("打开日志目录");
-        var exitItem = new ToolStripMenuItem("退出托盘程序");
+        _localization = new LocalizationManager();
+        _statusItem = new ToolStripMenuItem { Enabled = false };
+        _enableItem = new ToolStripMenuItem();
+        _restoreItem = new ToolStripMenuItem();
+        _languageItem = new ToolStripMenuItem();
+        _systemLanguageItem = new ToolStripMenuItem();
+        _englishLanguageItem = new ToolStripMenuItem();
+        _chineseLanguageItem = new ToolStripMenuItem();
+        _logItem = new ToolStripMenuItem();
+        _exitItem = new ToolStripMenuItem();
 
         _enableItem.Click += async (_, _) => await EnableMaintenanceModeAsync();
         _restoreItem.Click += async (_, _) => await RestorePolicyAsync();
-        logItem.Click += (_, _) => OpenLogDirectory();
-        exitItem.Click += (_, _) => ExitApplication();
+        _systemLanguageItem.Click += (_, _) => ChangeLanguage(LocalizationManager.SystemLanguage);
+        _englishLanguageItem.Click += (_, _) => ChangeLanguage(LocalizationManager.EnglishLanguage);
+        _chineseLanguageItem.Click += (_, _) => ChangeLanguage(LocalizationManager.ChineseLanguage);
+        _logItem.Click += (_, _) => OpenLogDirectory();
+        _exitItem.Click += (_, _) => ExitApplication();
+
+        _languageItem.DropDownItems.AddRange([
+            _systemLanguageItem,
+            new ToolStripSeparator(),
+            _englishLanguageItem,
+            _chineseLanguageItem
+        ]);
 
         var menu = new ContextMenuStrip();
         menu.Items.AddRange([
@@ -32,19 +54,19 @@ internal sealed class TrayApplicationContext : ApplicationContext
             _enableItem,
             _restoreItem,
             new ToolStripSeparator(),
-            logItem,
-            exitItem
+            _languageItem,
+            _logItem,
+            _exitItem
         ]);
 
         _appIcon = Icon.ExtractAssociatedIcon(Environment.ProcessPath
-            ?? throw new InvalidOperationException("无法读取程序图标。"))
-            ?? throw new InvalidOperationException("程序没有可用图标。");
+            ?? throw new InvalidOperationException("Could not read the application icon."))
+            ?? throw new InvalidOperationException("The application has no usable icon.");
 
         _notifyIcon = new NotifyIcon
         {
             ContextMenuStrip = menu,
             Icon = _appIcon,
-            Text = "UAC 维护模式：正在读取状态",
             Visible = true
         };
 
@@ -52,7 +74,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _refreshTimer.Tick += (_, _) => RefreshStatus();
         _refreshTimer.Start();
 
-        AppLog.Info("Tray application started.");
+        ApplyLocalization();
+        AppLog.Info($"Tray application started. Language={_localization.ActiveLanguage}; Preference={_localization.Preference}");
         RefreshStatus();
     }
 
@@ -77,8 +100,8 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
 
         var confirmation = MessageBox.Show(
-            "维护模式会临时取消管理员账户的 UAC 同意提示。此期间，任何以管理员权限启动的程序都可能直接获得高权限。\n\n程序会安排自动恢复，但意外关机或系统修改仍可能影响恢复。是否继续启用 6 小时？",
-            "确认降低 UAC 保护",
+            _localization.Get("ConfirmBody"),
+            _localization.Get("ConfirmTitle"),
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Warning,
             MessageBoxDefaultButton.Button2);
@@ -87,13 +110,13 @@ internal sealed class TrayApplicationContext : ApplicationContext
             return;
         }
 
-        SetBusy(true, "状态：等待管理员授权…");
+        SetBusy(true, _localization.Get("BusyWaitingElevation"));
         var result = await Task.Run(() => ElevationBroker.RunElevated("--enable", UacPolicyManager.DefaultMaintenanceHours));
         SetBusy(false, null);
 
         if (!result.Succeeded)
         {
-            ShowError(result.Error ?? "无法启用维护模式。");
+            ShowError(FormatElevationError(result, "EnableError"));
         }
 
         RefreshStatus();
@@ -106,16 +129,49 @@ internal sealed class TrayApplicationContext : ApplicationContext
             return;
         }
 
-        SetBusy(true, "状态：正在恢复…");
+        SetBusy(true, _localization.Get("BusyRestoring"));
         var result = await Task.Run(() => ElevationBroker.RunElevated("--restore"));
         SetBusy(false, null);
 
         if (!result.Succeeded)
         {
-            ShowError(result.Error ?? "无法恢复 UAC 策略。");
+            ShowError(FormatElevationError(result, "RestoreError"));
         }
 
         RefreshStatus();
+    }
+
+    private void ChangeLanguage(string language)
+    {
+        try
+        {
+            _localization.SetPreference(language);
+            ApplyLocalization();
+            AppLog.Info($"Language changed. Language={_localization.ActiveLanguage}; Preference={_localization.Preference}");
+            RefreshStatus();
+        }
+        catch (Exception ex)
+        {
+            AppLog.Error("Failed to change language", ex);
+            ShowError(ex.Message);
+        }
+    }
+
+    private void ApplyLocalization()
+    {
+        _statusItem.Text = _localization.Get("StatusReading");
+        _enableItem.Text = _localization.Get("EnableMaintenance");
+        _restoreItem.Text = _localization.Get("RestorePolicy");
+        _languageItem.Text = _localization.Get("Language");
+        _systemLanguageItem.Text = _localization.Get("LanguageSystem");
+        _englishLanguageItem.Text = _localization.Get("LanguageEnglishName");
+        _chineseLanguageItem.Text = _localization.Get("LanguageChineseName");
+        _logItem.Text = _localization.Get("OpenLogs");
+        _exitItem.Text = _localization.Get("Exit");
+        _systemLanguageItem.Checked = _localization.Preference == LocalizationManager.SystemLanguage;
+        _englishLanguageItem.Checked = _localization.Preference == LocalizationManager.EnglishLanguage;
+        _chineseLanguageItem.Checked = _localization.Preference == LocalizationManager.ChineseLanguage;
+        _notifyIcon.Text = TruncateTooltip(_localization.Get("TrayStatus", _localization.Get("StatusReading")));
     }
 
     private void RefreshStatus()
@@ -128,8 +184,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
         try
         {
             var status = UacPolicyManager.GetStatus();
-            _statusItem.Text = $"状态：{status.Description}";
-            _notifyIcon.Text = TruncateTooltip($"UAC 维护模式：{status.Description}");
+            var description = FormatStatus(status);
+            _statusItem.Text = description;
+            _notifyIcon.Text = TruncateTooltip(_localization.Get("TrayStatus", description));
             _notifyIcon.Icon = _appIcon;
             _enableItem.Enabled = status.EnableLua == 1 && status.ConsentPromptBehaviorAdmin != 0;
             _restoreItem.Enabled = status.HasManagedState;
@@ -137,11 +194,53 @@ internal sealed class TrayApplicationContext : ApplicationContext
         catch (Exception ex)
         {
             AppLog.Error("Failed to refresh UAC status", ex);
-            _statusItem.Text = "状态：读取失败";
-            _notifyIcon.Text = "UAC 维护模式：状态读取失败";
+            var failed = _localization.Get("StatusReadFailed");
+            _statusItem.Text = failed;
+            _notifyIcon.Text = TruncateTooltip(_localization.Get("TrayStatus", failed));
             _enableItem.Enabled = false;
             _restoreItem.Enabled = false;
         }
+    }
+
+    private string FormatStatus(UacStatus status)
+    {
+        if (status.IsMaintenanceActive)
+        {
+            if (status.RestoreAtUtc is { } restoreAt)
+            {
+                var remaining = restoreAt - DateTimeOffset.UtcNow;
+                if (remaining > TimeSpan.Zero)
+                {
+                    var formatted = remaining.TotalHours >= 1
+                        ? _localization.Get("RemainingHoursMinutes", (int)remaining.TotalHours, remaining.Minutes)
+                        : _localization.Get("RemainingMinutes", Math.Max(1, remaining.Minutes));
+                    return _localization.Get("StatusMaintenanceRemaining", formatted);
+                }
+            }
+
+            return _localization.Get("StatusMaintenanceWaiting");
+        }
+
+        if (status.ConsentPromptBehaviorAdmin == 0)
+        {
+            return _localization.Get("StatusUnmanagedNoPrompt");
+        }
+
+        return status.HasManagedState
+            ? _localization.Get("StatusRestoredPendingCleanup")
+            : _localization.Get("StatusNormal");
+    }
+
+    private string FormatElevationError(ElevationResult result, string fallbackKey)
+    {
+        return result.Failure switch
+        {
+            ElevationFailure.Cancelled => _localization.Get("ElevationCancelled"),
+            ElevationFailure.TimedOut => _localization.Get("ElevationTimedOut"),
+            ElevationFailure.ChildFailed => _localization.Get("ElevationChildFailed", result.ExitCode),
+            ElevationFailure.StartFailed => _localization.Get("ElevationStartFailed", result.Detail ?? fallbackKey),
+            _ => _localization.Get(fallbackKey)
+        };
     }
 
     private void SetBusy(bool busy, string? statusText)
@@ -149,6 +248,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _operationInProgress = busy;
         _enableItem.Enabled = !busy;
         _restoreItem.Enabled = !busy;
+        _languageItem.Enabled = !busy;
         if (statusText is not null)
         {
             _statusItem.Text = statusText;
@@ -164,9 +264,9 @@ internal sealed class TrayApplicationContext : ApplicationContext
         Process.Start(new ProcessStartInfo("explorer.exe", directory) { UseShellExecute = true });
     }
 
-    private static void ShowError(string message)
+    private void ShowError(string message)
     {
-        MessageBox.Show(message, "UAC 维护模式", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        MessageBox.Show(message, _localization.Get("ApplicationTitle"), MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
 
     private void ExitApplication()

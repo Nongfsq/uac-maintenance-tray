@@ -80,7 +80,7 @@ internal static class UacPolicyManager
                 stateKey.SetValue(EnabledAtName, enabledAt.ToString("O", CultureInfo.InvariantCulture), RegistryValueKind.String);
                 stateKey.SetValue(RestoreAtName, restoreAt.ToString("O", CultureInfo.InvariantCulture), RegistryValueKind.String);
                 stateKey.SetValue(GenerationIdName, generationId, RegistryValueKind.String);
-                stateKey.SetValue("Version", "1.0.0", RegistryValueKind.String);
+                stateKey.SetValue("Version", "1.1.0", RegistryValueKind.String);
             }
 
             RegisterAutoRestore(originalConsent, restoreAt, generationId);

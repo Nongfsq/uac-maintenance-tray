@@ -76,6 +76,15 @@ internal static class Program
     private static int RunDiagnostics(string[] args)
     {
         var status = UacPolicyManager.GetStatus();
+        var requestedLanguage = GetOption(args, "--language");
+        if (requestedLanguage is not null && requestedLanguage is not (
+            LocalizationManager.SystemLanguage or
+            LocalizationManager.EnglishLanguage or
+            LocalizationManager.ChineseLanguage))
+        {
+            return 2;
+        }
+        var localization = new LocalizationManager(requestedLanguage);
         var result = new
         {
             status.EnableLua,
@@ -86,14 +95,18 @@ internal static class Program
             IsElevated = ElevationBroker.IsElevated(),
             Runtime = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
             RuntimeVersion = Environment.Version.ToString(),
+            localization.Preference,
+            localization.ActiveLanguage,
+            localization.ExternalLanguagePackLoaded,
             Executable = Environment.ProcessPath,
             LogFile = AppLog.FilePath
         };
 
         var json = JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        if (args.Length >= 3 && args[1].Equals("--file", StringComparison.OrdinalIgnoreCase))
+        var requestedFile = GetOption(args, "--file");
+        if (requestedFile is not null)
         {
-            var path = Path.GetFullPath(args[2]);
+            var path = Path.GetFullPath(requestedFile);
             Directory.CreateDirectory(Path.GetDirectoryName(path)
                 ?? throw new InvalidOperationException("Diagnostics path has no parent directory."));
             File.WriteAllText(path, json);
@@ -104,5 +117,18 @@ internal static class Program
         }
 
         return status.EnableLua == 1 ? 0 : 3;
+    }
+
+    private static string? GetOption(string[] args, string option)
+    {
+        for (var index = 1; index < args.Length - 1; index++)
+        {
+            if (args[index].Equals(option, StringComparison.OrdinalIgnoreCase))
+            {
+                return args[index + 1];
+            }
+        }
+
+        return null;
     }
 }

@@ -17,6 +17,8 @@
 
 自动恢复任务与随机生成的代际令牌绑定。只有令牌仍然匹配、且策略仍是本工具设置的值时，它才会写回原值。因此，过期任务不会覆盖用户或其他管理员后来设置的 UAC 策略。
 
+托盘界面支持**跟随 Windows 语言、English、简体中文**。右键托盘图标并打开“语言”即可立即切换，选择会按用户保存。UTF-8 JSON 语言包位于 `languages/`；语言包缺失、损坏或键不完整时会回退到程序内置英文，确保恢复功能始终可用。
+
 这不是 UAC 绕过工具。启用和恢复仍使用 Windows 标准 UAC 提升流程，通常会出现一次同意提示。
 
 ## 设计边界
@@ -34,8 +36,8 @@
 
 | 发布文件 | 运行环境 | 适用情况 |
 |---|---|---|
-| `UacMaintenanceTray-v1.0.0-win-x64-framework-dependent.zip` | 需要安装最新版 **.NET 10 Desktop Runtime x64** | 推荐；ZIP 约 150 KB，兼容的运行时安全补丁可独立更新 |
-| `UacMaintenanceTray-v1.0.0-win-x64-self-contained.zip` | 无需安装 .NET | 无法安装运行时时使用；内置运行时，因此 ZIP 约 44 MB |
+| `UacMaintenanceTray-v1.1.0-win-x64-framework-dependent.zip` | 需要安装最新版 **.NET 10 Desktop Runtime x64** | 推荐；ZIP 约 150 KB，兼容的运行时安全补丁可独立更新 |
+| `UacMaintenanceTray-v1.1.0-win-x64-self-contained.zip` | 无需安装 .NET | 无法安装运行时时使用；内置运行时，因此 ZIP 约 44 MB |
 
 使用推荐的依赖运行时版时，应安装桌面运行时，而不只是基础的 `.NET Runtime`：
 
@@ -47,7 +49,7 @@ winget install --id Microsoft.DotNet.DesktopRuntime.10 --exact
 
 然后：
 
-1. 从同一个 GitHub Release 下载所选 ZIP 和 `UacMaintenanceTray-v1.0.0-SHA256SUMS.txt`。
+1. 从同一个 GitHub Release 下载所选 ZIP 和 `UacMaintenanceTray-v1.1.0-SHA256SUMS.txt`。
 2. 校验压缩包哈希后，把版本目录解压到可写位置，例如 `D:\Tools\UacMaintenanceTray`。
 3. 运行 `UacMaintenanceTray.exe`，通知区域会出现盾牌图标。
 4. 右键图标即可启用六小时维护模式、立即恢复、打开日志目录或退出。
@@ -60,7 +62,7 @@ winget install --id Microsoft.DotNet.DesktopRuntime.10 --exact
 
 ```powershell
 pwsh -NoProfile -File .\scripts\Test-PublicRepo.ps1
-pwsh -NoProfile -File .\scripts\Build-Release.ps1 -Version 1.0.0
+pwsh -NoProfile -File .\scripts\Build-Release.ps1 -Version 1.1.0
 ```
 
 构建结果位于 `artifacts/`，包括两种 `win-x64` 单文件发布包、两个 ZIP、一个共用 SHA-256 文件和各自的文件清单。二进制包通过 GitHub Release 发布，不提交到 Git 历史。
@@ -68,13 +70,18 @@ pwsh -NoProfile -File .\scripts\Build-Release.ps1 -Version 1.0.0
 发布包根目录经过整理：
 
 ```text
-UacMaintenanceTray-v1.0.0-win-x64-<deployment-mode>/
+UacMaintenanceTray-v1.1.0-win-x64-<deployment-mode>/
 ├── UacMaintenanceTray.exe
 ├── assets/
 ├── checksums/
 ├── docs/
+├── languages/
 └── licenses/
 ```
+
+## 语言包
+
+每个语言包都是 UTF-8 JSON 对象，键集合必须与 `languages/en-US.json` 一致。语言包只包含数据：程序不会执行其中的代码，会忽略未知键，拒绝超过 128 KiB 的文件，并为缺失或无效内容回退到内置英文。新增或翻译语言前请阅读[本地化架构](docs/LOCALIZATION.md)。
 
 ## 诊断
 
@@ -83,6 +90,8 @@ UacMaintenanceTray-v1.0.0-win-x64-<deployment-mode>/
 ```powershell
 .\UacMaintenanceTray.exe --diagnostics --file .\diagnostics.json
 ```
+
+如需在不修改托盘保存设置的情况下测试语言包，可追加 `--language en-US` 或 `--language zh-CN`。
 
 日志保存在程序旁的 `Logs\app.log`。日志包含时间和操作错误，不会向外发送遥测。
 

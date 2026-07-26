@@ -17,6 +17,8 @@ UAC Maintenance Tray changes `ConsentPromptBehaviorAdmin` to `0` for a bounded p
 
 The restore task is bound to a random generation token. It restores the saved value only when that token still matches and the policy is still the value set by this tool. A stale task therefore cannot overwrite a later UAC choice made by the user or another administrator.
 
+The tray UI supports **Follow Windows language**, **English**, and **Simplified Chinese**. Right-click the tray icon and open **Language** to switch immediately. The selection is stored per user. UTF-8 JSON language packs live in `languages/`; missing or invalid entries fall back to embedded English so recovery controls remain usable.
+
 This is not a UAC bypass. Enabling or restoring maintenance mode uses the normal Windows UAC elevation flow and may display one consent prompt.
 
 ## Design boundaries
@@ -34,8 +36,8 @@ Choose one clearly named package:
 
 | Release asset | Runtime requirement | When to choose it |
 |---|---|---|
-| `UacMaintenanceTray-v1.0.0-win-x64-framework-dependent.zip` | Install the latest **.NET 10 Desktop Runtime x64** | Recommended; approximately 150 KB as a ZIP and receives compatible runtime security patches independently |
-| `UacMaintenanceTray-v1.0.0-win-x64-self-contained.zip` | None | Use when installing .NET is not possible; approximately 44 MB as a ZIP because the runtime is bundled |
+| `UacMaintenanceTray-v1.1.0-win-x64-framework-dependent.zip` | Install the latest **.NET 10 Desktop Runtime x64** | Recommended; approximately 150 KB as a ZIP and receives compatible runtime security patches independently |
+| `UacMaintenanceTray-v1.1.0-win-x64-self-contained.zip` | None | Use when installing .NET is not possible; approximately 44 MB as a ZIP because the runtime is bundled |
 
 For the recommended framework-dependent package, install the desktop runtime—not only the basic `.NET Runtime`:
 
@@ -47,7 +49,7 @@ You can also use Microsoft's [.NET 10 download page](https://dotnet.microsoft.co
 
 Then:
 
-1. Download the selected ZIP and `UacMaintenanceTray-v1.0.0-SHA256SUMS.txt` from the same GitHub Release.
+1. Download the selected ZIP and `UacMaintenanceTray-v1.1.0-SHA256SUMS.txt` from the same GitHub Release.
 2. Verify the archive checksum, then extract the versioned folder to a writable location such as `D:\Tools\UacMaintenanceTray`.
 3. Run `UacMaintenanceTray.exe`. The shield appears in the notification area.
 4. Right-click the icon to enable a six-hour maintenance window, restore immediately, open logs, or exit.
@@ -60,7 +62,7 @@ Requirements: Windows 11, PowerShell 7, and the .NET 10 SDK selected by `global.
 
 ```powershell
 pwsh -NoProfile -File .\scripts\Test-PublicRepo.ps1
-pwsh -NoProfile -File .\scripts\Build-Release.ps1 -Version 1.0.0
+pwsh -NoProfile -File .\scripts\Build-Release.ps1 -Version 1.1.0
 ```
 
 The build creates both single-file `win-x64` variants, two ZIP archives, one shared checksum file, and per-package manifests under `artifacts/`. Release binaries are GitHub Release assets and are not committed to Git history.
@@ -68,13 +70,18 @@ The build creates both single-file `win-x64` variants, two ZIP archives, one sha
 The archive layout is intentionally product-oriented:
 
 ```text
-UacMaintenanceTray-v1.0.0-win-x64-<deployment-mode>/
+UacMaintenanceTray-v1.1.0-win-x64-<deployment-mode>/
 ├── UacMaintenanceTray.exe
 ├── assets/
 ├── checksums/
 ├── docs/
+├── languages/
 └── licenses/
 ```
+
+## Language packs
+
+Each pack is a UTF-8 JSON object whose keys must match `languages/en-US.json`. Packs are data only: the application never executes code from them, ignores unknown keys, rejects files larger than 128 KiB, and falls back to embedded English for missing or invalid values. See [Localization architecture](docs/LOCALIZATION.md) before adding or translating a pack.
 
 ## Diagnostics
 
@@ -83,6 +90,8 @@ Because the executable is a Windows GUI application, write diagnostics to a file
 ```powershell
 .\UacMaintenanceTray.exe --diagnostics --file .\diagnostics.json
 ```
+
+To test a language pack without changing the saved tray preference, append `--language en-US` or `--language zh-CN`.
 
 Logs are stored in `Logs\app.log` beside the executable. They contain timestamps and operational errors, but no telemetry is transmitted.
 

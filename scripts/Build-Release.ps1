@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string]$Version = '1.0.0',
+    [string]$Version = '1.1.0',
     [ValidateSet('Release')]
     [string]$Configuration = 'Release'
 )
@@ -24,6 +24,8 @@ foreach ($path in @($publishRoot, $stageRoot, $releaseRoot)) {
     }
     New-Item -ItemType Directory -Path $path -Force | Out-Null
 }
+Get-ChildItem -LiteralPath $artifacts -File -Filter '*-diagnostics.json' -ErrorAction SilentlyContinue |
+    Remove-Item -Force
 
 dotnet restore $project
 if ($LASTEXITCODE -ne 0) { throw 'dotnet restore failed.' }
@@ -43,6 +45,21 @@ function Copy-CommonReleaseFiles {
     Copy-Item -LiteralPath (Join-Path $repoRoot 'README.zh-CN.md') -Destination $docsDir
     Copy-Item -LiteralPath (Join-Path $repoRoot 'SECURITY.md') -Destination $docsDir
     Copy-Item -LiteralPath (Join-Path $repoRoot 'docs\SECURITY-MODEL.md') -Destination $docsDir
+    Copy-Item -LiteralPath (Join-Path $repoRoot 'docs\LOCALIZATION.md') -Destination $docsDir
+    $releaseNotes = Join-Path $repoRoot "docs\releases\v$Version.md"
+    if (Test-Path -LiteralPath $releaseNotes) {
+        Copy-Item -LiteralPath $releaseNotes -Destination (Join-Path $docsDir 'RELEASE-NOTES.md')
+    }
+
+    foreach ($readmeName in @('README.md', 'README.zh-CN.md')) {
+        $packagedReadme = Join-Path $docsDir $readmeName
+        $content = [IO.File]::ReadAllText($packagedReadme)
+        $content = $content.Replace('src="assets/', 'src="../assets/')
+        $content = $content.Replace('(docs/SECURITY-MODEL.md)', '(SECURITY-MODEL.md)')
+        $content = $content.Replace('(docs/LOCALIZATION.md)', '(LOCALIZATION.md)')
+        $content = $content.Replace('(LICENSE)', '(../licenses/PROJECT-LICENSE.txt)')
+        [IO.File]::WriteAllText($packagedReadme, $content, [Text.UTF8Encoding]::new($false))
+    }
 
     $licensesDir = Join-Path $Stage 'licenses'
     New-Item -ItemType Directory -Path $licensesDir -Force | Out-Null
@@ -51,6 +68,11 @@ function Copy-CommonReleaseFiles {
     $assetsDir = Join-Path $Stage 'assets'
     New-Item -ItemType Directory -Path $assetsDir -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $repoRoot 'assets\uac-maintenance-tray.svg') -Destination $assetsDir
+
+    $languagesDir = Join-Path $Stage 'languages'
+    New-Item -ItemType Directory -Path $languagesDir -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $repoRoot 'languages\en-US.json') -Destination $languagesDir
+    Copy-Item -LiteralPath (Join-Path $repoRoot 'languages\zh-CN.json') -Destination $languagesDir
 }
 
 function Copy-RuntimeNotices {
@@ -107,11 +129,19 @@ function Complete-ReleaseVariant {
         }
     [IO.File]::WriteAllLines($manifestPath, $manifestLines, [Text.UTF8Encoding]::new($false))
 
-    $diagnosticsPath = Join-Path $artifacts "$Variant-diagnostics.json"
-    $diagnosticsProcess = Start-Process -FilePath (Join-Path $Stage 'UacMaintenanceTray.exe') `
-        -ArgumentList @('--diagnostics', '--file', $diagnosticsPath) -WindowStyle Hidden -Wait -PassThru
-    if ($diagnosticsProcess.ExitCode -notin @(0, 3) -or -not (Test-Path -LiteralPath $diagnosticsPath)) {
-        throw "$Variant diagnostics smoke test failed with exit code $($diagnosticsProcess.ExitCode)."
+    foreach ($language in @('en-US', 'zh-CN')) {
+        $diagnosticsPath = Join-Path $artifacts "$Variant-$language-diagnostics.json"
+        $diagnosticsProcess = Start-Process -FilePath (Join-Path $Stage 'UacMaintenanceTray.exe') `
+            -ArgumentList @('--diagnostics', '--file', $diagnosticsPath, '--language', $language) `
+            -WindowStyle Hidden -Wait -PassThru
+        $diagnostics = if (Test-Path -LiteralPath $diagnosticsPath) {
+            Get-Content -Raw -LiteralPath $diagnosticsPath | ConvertFrom-Json
+        }
+        if ($diagnosticsProcess.ExitCode -notin @(0, 3) -or
+            $diagnostics.ActiveLanguage -ne $language -or
+            -not $diagnostics.ExternalLanguagePackLoaded) {
+            throw "$Variant $language diagnostics smoke test failed with exit code $($diagnosticsProcess.ExitCode)."
+        }
     }
 
     $zipPath = Join-Path $releaseRoot "$FolderName.zip"

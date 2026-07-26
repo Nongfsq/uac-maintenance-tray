@@ -29,6 +29,10 @@ The self-contained single-file executable includes Microsoft .NET runtime compon
 
 The framework-dependent single-file executable does not contain the .NET runtime. It requires the latest compatible .NET 10 Desktop Runtime x64 and can receive compatible runtime security patches independently of an application release.
 
+## Language-pack boundary
+
+Language packs are external UTF-8 JSON data and never loaded as executable assemblies. The loader accepts only known string keys, ignores unknown keys, rejects packs larger than 128 KiB, and falls back to embedded English after any read or parse failure. A modified pack can still mislabel a safety-sensitive command, so users should obtain official packs from the signed release checksum set and review third-party translations before use.
+
 ## Testing policy
 
 CI and normal local validation may read UAC status but must not invoke `--enable` or `--restore`. End-to-end mutation testing is permitted only in an isolated Windows Sandbox or disposable VM with a documented baseline and recovery snapshot.

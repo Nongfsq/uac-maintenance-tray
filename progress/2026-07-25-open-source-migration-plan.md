@@ -18,7 +18,7 @@ Revision: the release provides clearly named self-contained and framework-depend
 | OPEN-006 | Add deterministic build and privacy validation | Release and repository-audit scripts | Complete |
 | OPEN-007 | Add CI and tag-gated release automation | GitHub Actions workflows | Complete |
 | OPEN-008 | Validate and stage the local release | Tests, clean build, ZIP/checksum, local Git repository, refreshed D-drive install | Complete |
-| OPEN-009 | Publish source and release assets to GitHub | Remote repository and v1.0.0 release | Deferred pending explicit approval |
+| OPEN-009 | Publish source and release assets to GitHub | Public repository and multilingual v1.1.0 release | In progress; explicitly authorized |
 
 ## Validation gates
 

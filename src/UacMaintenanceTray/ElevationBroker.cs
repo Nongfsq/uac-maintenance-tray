@@ -37,27 +37,37 @@ internal static class ElevationBroker
             if (!process.WaitForExit((int)OperationTimeout.TotalMilliseconds))
             {
                 process.Kill(entireProcessTree: true);
-                return ElevationResult.Failure("管理员操作超时，已终止。", 1460);
+                return ElevationResult.Failed(ElevationFailure.TimedOut, 1460);
             }
 
             return process.ExitCode == 0
                 ? ElevationResult.Success()
-                : ElevationResult.Failure($"管理员操作失败，退出码 {process.ExitCode}。", process.ExitCode);
+                : ElevationResult.Failed(ElevationFailure.ChildFailed, process.ExitCode);
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
         {
-            return ElevationResult.Failure("已取消 UAC 授权。", 1223);
+            return ElevationResult.Failed(ElevationFailure.Cancelled, 1223);
         }
         catch (Exception ex)
         {
             AppLog.Error("Elevated operation failed", ex);
-            return ElevationResult.Failure(ex.Message, 1);
+            return ElevationResult.Failed(ElevationFailure.StartFailed, 1, ex.Message);
         }
     }
 }
 
-internal sealed record ElevationResult(bool Succeeded, string? Error, int ExitCode)
+internal enum ElevationFailure
 {
-    internal static ElevationResult Success() => new(true, null, 0);
-    internal static ElevationResult Failure(string error, int exitCode) => new(false, error, exitCode);
+    None,
+    Cancelled,
+    TimedOut,
+    ChildFailed,
+    StartFailed
+}
+
+internal sealed record ElevationResult(bool Succeeded, ElevationFailure Failure, int ExitCode, string? Detail)
+{
+    internal static ElevationResult Success() => new(true, ElevationFailure.None, 0, null);
+    internal static ElevationResult Failed(ElevationFailure failure, int exitCode, string? detail = null) =>
+        new(false, failure, exitCode, detail);
 }
