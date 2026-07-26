@@ -2,7 +2,7 @@
 
 Date: 2026-07-25
 Owner: Nongfsq
-Status: Local release complete; publication deferred
+Status: Published
 
 Revision: the release provides clearly named self-contained and framework-dependent single-file EXEs. Each root contains only the executable; all non-executable materials are grouped into named subdirectories.
 
@@ -18,7 +18,7 @@ Revision: the release provides clearly named self-contained and framework-depend
 | OPEN-006 | Add deterministic build and privacy validation | Release and repository-audit scripts | Complete |
 | OPEN-007 | Add CI and tag-gated release automation | GitHub Actions workflows | Complete |
 | OPEN-008 | Validate and stage the local release | Tests, clean build, ZIP/checksum, local Git repository, refreshed D-drive install | Complete |
-| OPEN-009 | Publish source and release assets to GitHub | Public repository and multilingual v1.1.0 release | In progress; explicitly authorized |
+| OPEN-009 | Publish source and release assets to GitHub | Public repository and multilingual v1.1.0 release | Complete |
 
 ## Validation gates
 
