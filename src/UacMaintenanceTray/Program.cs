@@ -84,6 +84,8 @@ internal static class Program
             status.IsMaintenanceActive,
             status.RestoreAtUtc,
             IsElevated = ElevationBroker.IsElevated(),
+            Runtime = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
+            RuntimeVersion = Environment.Version.ToString(),
             Executable = Environment.ProcessPath,
             LogFile = AppLog.FilePath
         };

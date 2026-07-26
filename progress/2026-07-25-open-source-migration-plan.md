@@ -4,6 +4,8 @@ Date: 2026-07-25
 Owner: Nongfsq
 Status: Local release complete; publication deferred
 
+Revision: the release provides clearly named self-contained and framework-dependent single-file EXEs. Each root contains only the executable; all non-executable materials are grouped into named subdirectories.
+
 ## Work items
 
 | ID | Work item | Evidence of completion | Status |

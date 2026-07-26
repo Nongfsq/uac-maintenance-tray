@@ -24,12 +24,31 @@ This is not a UAC bypass. Enabling or restoring maintenance mode uses the normal
 - No Windows service, driver, telemetry, updater, or autostart entry.
 - No change to `EnableLUA`, Microsoft Defender, the firewall, or execution policy configuration.
 - No permanent background privilege: the tray runs as the signed-in user and launches a short elevated child process only for a requested policy change.
-- A self-contained folder release keeps the .NET runtime beside the app. It is intentionally not a true single-file bundle, which can extract native framework files under `%TEMP%\.net`.
+- Both release variants contain one application EXE. Supporting documentation, licenses, checksums, and artwork are grouped into named subdirectories; no loose DLL or Markdown files are placed beside the EXE.
+- The framework-dependent package is the recommended small download and uses the latest compatible .NET 10 Desktop Runtime installed on Windows.
+- The self-contained package bundles its own .NET runtime. On first launch after a build change, .NET may extract native components under `%TEMP%\.net`; `DOTNET_BUNDLE_EXTRACT_BASE_DIR` can relocate that cache.
 
 ## Install and run
 
-1. Download `UacMaintenanceTray-v1.0.0-win-x64.zip` and its `.sha256.txt` file from the GitHub Release.
-2. Verify the checksum, then extract the complete folder to a writable location such as `D:\Tools\UacMaintenanceTray`.
+Choose one clearly named package:
+
+| Release asset | Runtime requirement | When to choose it |
+|---|---|---|
+| `UacMaintenanceTray-v1.0.0-win-x64-framework-dependent.zip` | Install the latest **.NET 10 Desktop Runtime x64** | Recommended; approximately 150 KB as a ZIP and receives compatible runtime security patches independently |
+| `UacMaintenanceTray-v1.0.0-win-x64-self-contained.zip` | None | Use when installing .NET is not possible; approximately 44 MB as a ZIP because the runtime is bundled |
+
+For the recommended framework-dependent package, install the desktop runtime—not only the basic `.NET Runtime`:
+
+```powershell
+winget install --id Microsoft.DotNet.DesktopRuntime.10 --exact
+```
+
+You can also use Microsoft's [.NET 10 download page](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) and select **.NET Desktop Runtime → Windows x64**. The SDK also satisfies this requirement.
+
+Then:
+
+1. Download the selected ZIP and `UacMaintenanceTray-v1.0.0-SHA256SUMS.txt` from the same GitHub Release.
+2. Verify the archive checksum, then extract the versioned folder to a writable location such as `D:\Tools\UacMaintenanceTray`.
 3. Run `UacMaintenanceTray.exe`. The shield appears in the notification area.
 4. Right-click the icon to enable a six-hour maintenance window, restore immediately, open logs, or exit.
 
@@ -37,14 +56,25 @@ The application is currently unsigned, so Windows SmartScreen may show an unreco
 
 ## Build from source
 
-Requirements: Windows 11, PowerShell 7, and the .NET 10 SDK selected by `global.json`.
+Requirements: Windows 11, PowerShell 7, and the .NET 10 SDK selected by `global.json`. The SDK can be installed with `winget install --id Microsoft.DotNet.SDK.10 --exact`.
 
 ```powershell
 pwsh -NoProfile -File .\scripts\Test-PublicRepo.ps1
 pwsh -NoProfile -File .\scripts\Build-Release.ps1 -Version 1.0.0
 ```
 
-The build creates a self-contained `win-x64` folder, ZIP archive, checksum, and file manifest under `artifacts/`. Release binaries are GitHub Release assets and are not committed to Git history.
+The build creates both single-file `win-x64` variants, two ZIP archives, one shared checksum file, and per-package manifests under `artifacts/`. Release binaries are GitHub Release assets and are not committed to Git history.
+
+The archive layout is intentionally product-oriented:
+
+```text
+UacMaintenanceTray-v1.0.0-win-x64-<deployment-mode>/
+├── UacMaintenanceTray.exe
+├── assets/
+├── checksums/
+├── docs/
+└── licenses/
+```
 
 ## Diagnostics
 
@@ -72,13 +102,14 @@ Value `5` is the Windows default for administrators, but organizations may use a
 
 ## License and notices
 
-Project source is available under the [MIT License](LICENSE). Self-contained release archives also include the applicable .NET runtime license and third-party notices.
+Project source is available under the [MIT License](LICENSE). The self-contained archive also includes the applicable .NET runtime license and third-party notices.
 
 UAC Maintenance Tray is an independent project and is not affiliated with or endorsed by Microsoft. Windows and Microsoft are trademarks of the Microsoft group of companies.
 
 ## References
 
 - [.NET application publishing overview](https://learn.microsoft.com/en-us/dotnet/core/deploying/)
+- [Install .NET on Windows](https://learn.microsoft.com/en-us/dotnet/core/install/windows)
 - [.NET single-file deployment and extraction behavior](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview)
 - [GitHub Releases documentation](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)
 - [.NET license information](https://github.com/dotnet/core/blob/main/license-information.md)

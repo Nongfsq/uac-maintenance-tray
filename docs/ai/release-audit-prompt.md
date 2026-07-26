@@ -11,7 +11,7 @@ Verify all of the following:
 5. Manual restoration cannot silently discard recovery state when scheduled-task deletion fails.
 6. All child processes have bounded waits; redirected output cannot deadlock.
 7. CI never invokes policy-mutating commands. Release publication is tag-gated and uses least-privilege GitHub permissions.
-8. The ZIP contains one versioned top-level folder, the EXE and complete self-contained runtime, both READMEs, MIT license, approved SVG, .NET licenses/notices, and a file manifest. Its SHA-256 sidecar matches.
+8. Both clearly named ZIPs contain one versioned top-level folder whose root has only `UacMaintenanceTray.exe`; `assets/`, `checksums/`, `docs/`, and `licenses/` contain the approved SVG, manifest, both READMEs, and MIT license. The self-contained ZIP additionally contains exact .NET notices; the framework-dependent ZIP does not claim to bundle .NET. Both hashes match the shared `SHA256SUMS` file.
 9. English and Chinese documentation agree about risks, installation, diagnostics, recovery, unsigned SmartScreen behavior, and the no-service/no-telemetry design.
 10. The approved SVG produces the EXE and tray icon at Windows notification-area sizes.
 

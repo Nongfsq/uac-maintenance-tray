@@ -15,14 +15,14 @@ UAC Maintenance Tray gives a Windows administrator an explicit, reversible tray 
 - Explicit confirmation before enabling the reduced-prompt maintenance mode.
 - A token-bound automatic restore task that cannot overwrite a later unrelated UAC choice.
 - English primary documentation and a complete Simplified Chinese guide.
-- Reproducible `win-x64` self-contained folder release packaged as ZIP with checksum and runtime notices.
+- Reproducible `win-x64` self-contained and framework-dependent single-file releases, packaged as separately named ZIPs with a shared checksum file.
 - Source, build validation, privacy checks, CI, and a GitHub Release workflow.
 
 ## Non-goals
 
 - Bypassing Windows elevation or silently granting an unelevated process administrator rights.
 - Permanently disabling UAC, changing Defender, or running as a Windows service.
-- A true single-file executable that extracts framework files into the system temporary directory.
+- Hiding the .NET bundle extraction behavior or promising that a true single-file build never uses a temporary cache.
 - Automatic publication, code-signing certificate acquisition, or package-manager distribution in this phase.
 
 ## Current reality
@@ -31,14 +31,14 @@ The prototype works as a tray application and preserves the original UAC value, 
 
 ## Release decision
 
-Use an MIT license. Distribute a self-contained folder ZIP rather than a true single-file bundle: this keeps the runtime beside the application on the selected drive and avoids native single-file extraction under `%TEMP%\.net`.
+Use an MIT license. Make the framework-dependent single-file package the recommended small download and retain a self-contained single-file fallback. Identify deployment mode in each filename. Keep the product root clean and group non-executable materials into named subdirectories. Document the required .NET 10 Desktop Runtime x64 and the self-contained bundle extraction behavior.
 
 ## Success criteria
 
 - A clean canonical repository exists without copied `bin`, `obj`, logs, registry exports, credentials, or local absolute paths in tracked files.
 - The approved SVG is the canonical brand asset and generates the multi-resolution EXE/tray ICO.
 - Safety-sensitive state transitions are token-bound, confirmed, logged, and covered by non-mutating tests.
-- `scripts/Build-Release.ps1` produces a versioned ZIP, SHA-256 sidecar, manifest, MIT license, both READMEs, SVG, and applicable .NET notices.
+- `scripts/Build-Release.ps1` produces both versioned ZIPs, one shared SHA-256 file, per-package manifests, MIT license, both READMEs, SVG, and applicable .NET notices.
 - CI builds and tests without mutating the host UAC policy; release publication is tag-gated.
 - Local Git history is ready for review. GitHub repository creation and push remain deferred until the owner explicitly authorizes publication.
 

@@ -61,18 +61,38 @@ if ($ReleaseZip) {
         $failures.Add("Release ZIP does not exist: $ReleaseZip")
     }
     else {
+        $releaseName = [IO.Path]::GetFileName($ReleaseZip)
+        if ($releaseName -notmatch '-(self-contained|framework-dependent)\.zip$') {
+            $failures.Add("Release ZIP name does not identify its deployment mode: $releaseName")
+        }
+        $isSelfContained = $releaseName -match '-self-contained\.zip$'
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         $archive = [IO.Compression.ZipFile]::OpenRead($ReleaseZip)
         try {
             $names = @($archive.Entries.FullName)
-            $required = @('UacMaintenanceTray.exe', 'README.md', 'README.zh-CN.md', 'LICENSE', 'assets/uac-maintenance-tray.svg', 'FILE-MANIFEST.sha256')
+            $required = @(
+                'UacMaintenanceTray.exe',
+                'docs/README.md',
+                'docs/README.zh-CN.md',
+                'licenses/PROJECT-LICENSE.txt',
+                'assets/uac-maintenance-tray.svg',
+                'checksums/FILE-MANIFEST.sha256'
+            )
             foreach ($requiredFile in $required) {
                 if (-not ($names | Where-Object { $_.Replace('\', '/').EndsWith("/$requiredFile") })) {
                     $failures.Add("Release ZIP is missing $requiredFile")
                 }
             }
-            if (-not ($names | Where-Object { $_ -match '/runtime-notices/.+' })) {
+            if ($isSelfContained -and -not ($names | Where-Object { $_ -match '/licenses/Microsoft\..+' })) {
                 $failures.Add('Release ZIP has no runtime notices.')
+            }
+            $rootPrefix = ($names[0].Replace('\', '/') -split '/')[0]
+            $rootFiles = @($archive.Entries | Where-Object {
+                -not $_.FullName.EndsWith('/') -and
+                $_.FullName.Replace('\', '/').Substring($rootPrefix.Length + 1) -notmatch '/'
+            })
+            if ($rootFiles.Count -ne 1 -or -not $rootFiles[0].Name.Equals('UacMaintenanceTray.exe', [StringComparison]::OrdinalIgnoreCase)) {
+                $failures.Add('Release root must contain only UacMaintenanceTray.exe; all supporting files belong in named folders.')
             }
         }
         finally {

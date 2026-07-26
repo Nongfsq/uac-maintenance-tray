@@ -25,7 +25,9 @@ If any condition fails, the task does not overwrite the policy. A matching task 
 
 The release is unsigned. The SHA-256 sidecar detects accidental or malicious archive replacement only when users obtain the checksum from a trusted release page. Source review and reproducible local builds remain the strongest available verification until code signing is introduced.
 
-The self-contained archive includes Microsoft .NET runtime components. Runtime licenses and third-party notices are copied from the exact restored runtime packs. Bundled runtimes must be rebuilt when relevant security updates are released.
+The self-contained single-file executable includes Microsoft .NET runtime components. Runtime licenses and third-party notices are copied from the exact restored runtime packs. Bundled runtimes must be rebuilt when relevant security updates are released. Native runtime files can be extracted by the .NET bundle host under `%TEMP%\.net`; users can relocate this cache with `DOTNET_BUNDLE_EXTRACT_BASE_DIR` before starting the process.
+
+The framework-dependent single-file executable does not contain the .NET runtime. It requires the latest compatible .NET 10 Desktop Runtime x64 and can receive compatible runtime security patches independently of an application release.
 
 ## Testing policy
 

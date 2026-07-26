@@ -24,12 +24,31 @@
 - 不创建 Windows 服务、驱动、遥测、更新器或开机启动项。
 - 不修改 `EnableLUA`、Microsoft Defender、防火墙或系统执行策略。
 - 托盘以普通用户身份运行，只在用户明确请求切换时启动短时管理员子进程。
-- 发布包是自包含文件夹，.NET 运行时和程序放在同一位置。刻意不制作真正的单文件包，以免原生框架文件被解压到 `%TEMP%\.net`。
+- 两种发布包都只有一个应用程序 EXE。说明文档、许可证、校验清单和图形资源分别归入具名子目录，EXE 旁不会散落 DLL 或 Markdown 文件。
+- 推荐使用体积较小的“依赖运行时版”，它会使用 Windows 中已安装的最新兼容 .NET 10 Desktop Runtime。
+- “自包含版”内置完整 .NET 运行时。新构建首次运行时可能把原生组件解压到 `%TEMP%\.net`；可通过 `DOTNET_BUNDLE_EXTRACT_BASE_DIR` 转移该缓存。
 
 ## 安装与使用
 
-1. 从 GitHub Release 下载 `UacMaintenanceTray-v1.0.0-win-x64.zip` 和对应的 `.sha256.txt`。
-2. 校验哈希后，把完整文件夹解压到可写目录，例如 `D:\Tools\UacMaintenanceTray`。
+请根据文件名选择一种发布包：
+
+| 发布文件 | 运行环境 | 适用情况 |
+|---|---|---|
+| `UacMaintenanceTray-v1.0.0-win-x64-framework-dependent.zip` | 需要安装最新版 **.NET 10 Desktop Runtime x64** | 推荐；ZIP 约 150 KB，兼容的运行时安全补丁可独立更新 |
+| `UacMaintenanceTray-v1.0.0-win-x64-self-contained.zip` | 无需安装 .NET | 无法安装运行时时使用；内置运行时，因此 ZIP 约 44 MB |
+
+使用推荐的依赖运行时版时，应安装桌面运行时，而不只是基础的 `.NET Runtime`：
+
+```powershell
+winget install --id Microsoft.DotNet.DesktopRuntime.10 --exact
+```
+
+也可以打开微软的 [.NET 10 下载页](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)，选择 **.NET Desktop Runtime → Windows x64**。已经安装 .NET 10 SDK 的电脑无需重复安装。
+
+然后：
+
+1. 从同一个 GitHub Release 下载所选 ZIP 和 `UacMaintenanceTray-v1.0.0-SHA256SUMS.txt`。
+2. 校验压缩包哈希后，把版本目录解压到可写位置，例如 `D:\Tools\UacMaintenanceTray`。
 3. 运行 `UacMaintenanceTray.exe`，通知区域会出现盾牌图标。
 4. 右键图标即可启用六小时维护模式、立即恢复、打开日志目录或退出。
 
@@ -37,14 +56,25 @@
 
 ## 从源码构建
 
-需要 Windows 11、PowerShell 7，以及由 `global.json` 指定的 .NET 10 SDK。
+需要 Windows 11、PowerShell 7，以及由 `global.json` 指定的 .NET 10 SDK。可通过 `winget install --id Microsoft.DotNet.SDK.10 --exact` 安装 SDK。
 
 ```powershell
 pwsh -NoProfile -File .\scripts\Test-PublicRepo.ps1
 pwsh -NoProfile -File .\scripts\Build-Release.ps1 -Version 1.0.0
 ```
 
-构建结果位于 `artifacts/`，包括 `win-x64` 自包含目录、ZIP、SHA-256 和文件清单。二进制包通过 GitHub Release 发布，不提交到 Git 历史。
+构建结果位于 `artifacts/`，包括两种 `win-x64` 单文件发布包、两个 ZIP、一个共用 SHA-256 文件和各自的文件清单。二进制包通过 GitHub Release 发布，不提交到 Git 历史。
+
+发布包根目录经过整理：
+
+```text
+UacMaintenanceTray-v1.0.0-win-x64-<deployment-mode>/
+├── UacMaintenanceTray.exe
+├── assets/
+├── checksums/
+├── docs/
+└── licenses/
+```
 
 ## 诊断
 
@@ -79,6 +109,7 @@ Remove-Item -LiteralPath 'HKLM:\SOFTWARE\UacMaintenanceTray' -Recurse -Force -Er
 ## 参考资料
 
 - [.NET 应用发布概述](https://learn.microsoft.com/en-us/dotnet/core/deploying/)
+- [在 Windows 上安装 .NET](https://learn.microsoft.com/zh-cn/dotnet/core/install/windows)
 - [.NET 单文件部署与解压行为](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview)
 - [GitHub Releases 文档](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)
 - [.NET 许可证信息](https://github.com/dotnet/core/blob/main/license-information.md)
