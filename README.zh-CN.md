@@ -1,0 +1,84 @@
+<p align="center">
+  <img src="assets/uac-maintenance-tray.svg" width="144" alt="UAC Maintenance Tray 盾牌图标">
+</p>
+
+<h1 align="center">UAC Maintenance Tray</h1>
+
+<p align="center">用于临时管理员维护的、明确且可恢复的 Windows 托盘开关。</p>
+
+<p align="center"><a href="README.md">English README</a></p>
+
+> [!WARNING]
+> 维护模式会降低管理员账户的 UAC 保护。启用期间，请求提升的程序可能不再显示同意提示。请只在有人看管的短时维护窗口中使用。
+
+## 功能
+
+程序在保持 `EnableLUA` 开启的前提下，临时把 `ConsentPromptBehaviorAdmin` 设为 `0`。修改之前，它会保存原值，并创建一个以 SYSTEM 身份运行的计划任务用于自动恢复。托盘会显示当前状态，并允许随时立即恢复。
+
+自动恢复任务与随机生成的代际令牌绑定。只有令牌仍然匹配、且策略仍是本工具设置的值时，它才会写回原值。因此，过期任务不会覆盖用户或其他管理员后来设置的 UAC 策略。
+
+这不是 UAC 绕过工具。启用和恢复仍使用 Windows 标准 UAC 提升流程，通常会出现一次同意提示。
+
+## 设计边界
+
+- 不创建 Windows 服务、驱动、遥测、更新器或开机启动项。
+- 不修改 `EnableLUA`、Microsoft Defender、防火墙或系统执行策略。
+- 托盘以普通用户身份运行，只在用户明确请求切换时启动短时管理员子进程。
+- 发布包是自包含文件夹，.NET 运行时和程序放在同一位置。刻意不制作真正的单文件包，以免原生框架文件被解压到 `%TEMP%\.net`。
+
+## 安装与使用
+
+1. 从 GitHub Release 下载 `UacMaintenanceTray-v1.0.0-win-x64.zip` 和对应的 `.sha256.txt`。
+2. 校验哈希后，把完整文件夹解压到可写目录，例如 `D:\Tools\UacMaintenanceTray`。
+3. 运行 `UacMaintenanceTray.exe`，通知区域会出现盾牌图标。
+4. 右键图标即可启用六小时维护模式、立即恢复、打开日志目录或退出。
+
+程序目前没有商业代码签名，Windows SmartScreen 可能提示“无法识别的应用”。运行前请核对发布页提供的 SHA-256。
+
+## 从源码构建
+
+需要 Windows 11、PowerShell 7，以及由 `global.json` 指定的 .NET 10 SDK。
+
+```powershell
+pwsh -NoProfile -File .\scripts\Test-PublicRepo.ps1
+pwsh -NoProfile -File .\scripts\Build-Release.ps1 -Version 1.0.0
+```
+
+构建结果位于 `artifacts/`，包括 `win-x64` 自包含目录、ZIP、SHA-256 和文件清单。二进制包通过 GitHub Release 发布，不提交到 Git 历史。
+
+## 诊断
+
+程序是 Windows GUI 应用，请把诊断结果写入文件：
+
+```powershell
+.\UacMaintenanceTray.exe --diagnostics --file .\diagnostics.json
+```
+
+日志保存在程序旁的 `Logs\app.log`。日志包含时间和操作错误，不会向外发送遥测。
+
+## 安全与恢复
+
+使用前请阅读[安全模型](docs/SECURITY-MODEL.md)，漏洞报告方式见 [SECURITY.md](SECURITY.md)。自动化测试绝不会修改宿主机 UAC；真实策略切换测试应只在 Windows Sandbox 或一次性虚拟机中进行。
+
+若托盘不可用，可在提升后的 PowerShell 中恢复：
+
+```powershell
+Set-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name ConsentPromptBehaviorAdmin -Type DWord -Value 5
+Unregister-ScheduledTask -TaskName 'UacMaintenanceTray-AutoRestore' -Confirm:$false -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath 'HKLM:\SOFTWARE\UacMaintenanceTray' -Recurse -Force -ErrorAction SilentlyContinue
+```
+
+数值 `5` 是 Windows 对管理员账户的默认设置，但组织策略可能不同；如已知原值，应恢复为实际原值。
+
+## 许可证
+
+项目源码采用 [MIT License](LICENSE)。自包含发布包同时提供适用的 .NET 运行时许可证和第三方声明。
+
+本项目为独立项目，与 Microsoft 没有关联，也未获得其背书。Windows 和 Microsoft 是 Microsoft 集团公司的商标。
+
+## 参考资料
+
+- [.NET 应用发布概述](https://learn.microsoft.com/en-us/dotnet/core/deploying/)
+- [.NET 单文件部署与解压行为](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview)
+- [GitHub Releases 文档](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)
+- [.NET 许可证信息](https://github.com/dotnet/core/blob/main/license-information.md)

@@ -1,0 +1,45 @@
+# Build and release output
+**/bin/
+**/obj/
+artifacts/
+publish/
+release/
+
+# Runtime output
+Logs/
+logs/
+*.log
+diagnostics*.json
+
+# IDE and user state
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Secrets and machine-specific exports
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.cer
+*.key
+*.pem
+*.snk
+*.reg
+
+# Release binaries belong in GitHub Releases
+*.zip
+*.7z
+*.sha256
+*.sha256.txt
+*.pdb
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
