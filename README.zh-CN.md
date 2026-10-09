@@ -109,6 +109,12 @@ Remove-Item -LiteralPath 'HKLM:\SOFTWARE\UacMaintenanceTray' -Recurse -Force -Er
 
 数值 `5` 是 Windows 对管理员账户的默认设置，但组织策略可能不同；如已知原值，应恢复为实际原值。
 
+## 支持
+
+如果这个项目对你有用，可以请我喝杯咖啡。
+
+<a href="https://buymeacoffee.com/frankmenger"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="44"></a>
+
 ## 许可证
 
 项目源码采用 [MIT License](LICENSE)。自包含发布包同时提供适用的 .NET 运行时许可证和第三方声明。

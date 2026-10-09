@@ -109,6 +109,12 @@ Remove-Item -LiteralPath 'HKLM:\SOFTWARE\UacMaintenanceTray' -Recurse -Force -Er
 
 Value `5` is the Windows default for administrators, but organizations may use a different policy. Restore your known original value when applicable.
 
+## Support
+
+If this project is useful to you, you can buy me a coffee.
+
+<a href="https://buymeacoffee.com/frankmenger"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="44"></a>
+
 ## License and notices
 
 Project source is available under the [MIT License](LICENSE). The self-contained archive also includes the applicable .NET runtime license and third-party notices.
